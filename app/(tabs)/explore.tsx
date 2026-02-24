@@ -1,112 +1,129 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: '#efe7dd', dark: '#efe7dd' }}
       headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
+        <View style={styles.headerImage}>
+          <ThemedText style={styles.headerBrand}>ONE LUX STAY</ThemedText>
+          <ThemedText style={styles.headerTagline}>Guest Companion App</ThemedText>
+        </View>
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
+        <ThemedText type="title" style={styles.title}>
+          About One Lux Stay
         </ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
+
+      <ThemedText style={styles.body}>
+        One Lux Stay delivers a seamless, secure guest experience powered by Guesty. Our companion
+        app makes check-ins smoother, reduces support calls, and keeps every detail in one place.
+      </ThemedText>
+
+      <ThemedView style={styles.section}>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          What Guests Can Do
         </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
+        <ThemedText style={styles.listItem}>- Access door lock codes and entry steps</ThemedText>
+        <ThemedText style={styles.listItem}>- View WiFi network and password</ThemedText>
+        <ThemedText style={styles.listItem}>- Get check-in and check-out instructions</ThemedText>
+        <ThemedText style={styles.listItem}>- Contact support quickly</ThemedText>
+      </ThemedView>
+
+      <ThemedView style={styles.section}>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          How It Works
         </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
+        <ThemedText style={styles.listItem}>
+          1. Guest books a stay and receives a reservation code.
         </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
+        <ThemedText style={styles.listItem}>
+          2. Guest enters the code in the app.
         </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
+        <ThemedText style={styles.listItem}>
+          3. The app verifies the reservation securely via our backend.
         </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
+        <ThemedText style={styles.listItem}>
+          4. Access details unlock closer to check-in time.
         </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
+      </ThemedView>
+
+      <ThemedView style={styles.section}>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          Security & Privacy
+        </ThemedText>
+        <ThemedText style={styles.listItem}>
+          - The app never connects directly to Guesty.
+        </ThemedText>
+        <ThemedText style={styles.listItem}>
+          - Access is time-limited and disabled after checkout.
+        </ThemedText>
+        <ThemedText style={styles.listItem}>
+          - We only display the data required for the stay.
+        </ThemedText>
+      </ThemedView>
+
+      <ThemedView style={styles.section}>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          Support
+        </ThemedText>
+        <ThemedText style={styles.listItem}>- Call or message support from the app</ThemedText>
+        <ThemedText style={styles.listItem}>
+          - Request early check-in or late checkout
+        </ThemedText>
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBrand: {
+    fontSize: 18,
+    letterSpacing: 4,
+    color: '#7b6656',
+    fontFamily: Fonts.sans,
+  },
+  headerTagline: {
+    fontSize: 12,
+    letterSpacing: 1.5,
+    color: '#9b8875',
+    fontFamily: Fonts.sans,
+    marginTop: 6,
   },
   titleContainer: {
     flexDirection: 'row',
     gap: 8,
+  },
+  title: {
+    fontFamily: Fonts.serif,
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#5c4c3f',
+  },
+  section: {
+    gap: 6,
+    paddingTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    color: '#4a3d33',
+    fontFamily: Fonts.sans,
+  },
+  listItem: {
+    fontSize: 13,
+    color: '#5c4c3f',
   },
 });
