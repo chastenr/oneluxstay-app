@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ScrollView, Text, View, ActivityIndicator } from 'react-native'
+import { ScrollView, Text, View, ActivityIndicator, StyleSheet } from 'react-native'
 import { supabase } from '../../lib/supabase'
 
 type Listing = {
@@ -98,7 +98,7 @@ export default function ListingsScreen() {
   )
 }
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
     padding: 32,
     paddingTop: 56,
@@ -178,4 +178,4 @@ const styles = {
     color: '#0D1B2A',
     lineHeight: 18,
   },
-}
+})
