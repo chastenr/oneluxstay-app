@@ -29,6 +29,7 @@ const MAPPING = {
   'person.crop.circle.fill': 'account-circle',
   'bolt.fill': 'bolt',
   'star.fill': 'star',
+  globe: 'public',
   sparkles: 'auto-awesome',
   'info.circle.fill': 'info',
 } as IconMapping;

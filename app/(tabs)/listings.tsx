@@ -1,105 +1,66 @@
-import { useEffect, useState } from 'react'
-import { ScrollView, Text, View, ActivityIndicator, StyleSheet } from 'react-native'
-import { supabase } from '../../lib/supabase'
+import { ScrollView, StyleSheet, Text, View, Pressable, Linking } from 'react-native'
 import { IconSymbol } from '@/components/ui/icon-symbol'
 import { Fonts } from '@/constants/theme'
 
-type Listing = {
-  id?: number
-  created_at?: string
-  listing_id?: string
-  wifi_name?: string
-  wifi_password?: string
-  door_code?: string
-  checkin_instructions?: string
-}
+const links = [
+  {
+    title: 'Book Your Stay',
+    subtitle: 'Oneluxstay.com',
+    url: 'https://oneluxstay.com',
+    icon: 'globe',
+  },
+  {
+    title: 'Instagram',
+    subtitle: '@oneluxstay',
+    url: 'https://instagram.com/oneluxstay',
+    icon: 'star.fill',
+  },
+  {
+    title: 'Call Us',
+    subtitle: '+1 213 866 3589',
+    url: 'tel:+12138663589',
+    icon: 'phone.fill',
+  },
+]
 
 export default function ListingsScreen() {
-  const [listings, setListings] = useState<Listing[]>([])
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
-
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      setLoading(true)
-      setErrorMessage('')
-      const { data, error } = await supabase
-        .from('Listings')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (!mounted) return
-      if (error) {
-        setErrorMessage('Unable to load listings')
-        setListings([])
-      } else {
-        setListings(data || [])
-      }
-      setLoading(false)
-    }
-
-    load()
-    return () => {
-      mounted = false
-    }
-  }, [])
-
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.eyebrow}>FUTURES</Text>
-        <Text style={styles.title}>Access details at a glance.</Text>
-        <Text style={styles.subtitle}>Property access details and Wi-Fi information.</Text>
+        <Text style={styles.title}>Booking links and guest support.</Text>
+        <Text style={styles.subtitle}>Tap to open a link or contact us.</Text>
       </View>
 
-      {loading && (
-        <View style={styles.center}>
-          <ActivityIndicator color={palette.gold} />
-          <Text style={styles.helper}>Loading listings...</Text>
-        </View>
-      )}
-
-      {!loading && errorMessage !== '' && (
-        <Text style={styles.error}>{errorMessage}</Text>
-      )}
-
-      {!loading && errorMessage === '' && listings.length === 0 && (
-        <Text style={styles.helper}>No listings found.</Text>
-      )}
-
-      {!loading &&
-        errorMessage === '' &&
-        listings.map((listing) => (
-          <View key={listing.id ?? listing.listing_id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{listing.listing_id || 'Listing'}</Text>
-              <IconSymbol name="key.fill" size={18} color={palette.gold} />
+      <View style={styles.cardStack}>
+        {links.map((link) => (
+          <Pressable
+            key={link.title}
+            onPress={() => Linking.openURL(link.url)}
+            style={({ pressed }) => [
+              styles.card,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <View style={styles.cardIcon}>
+              <IconSymbol name={link.icon} size={18} color={palette.night} />
             </View>
-
-            <View style={styles.row}>
-              <Text style={styles.label}>Door Code</Text>
-              <Text style={styles.value}>{listing.door_code || '—'}</Text>
+            <View style={styles.cardText}>
+              <Text style={styles.cardTitle}>{link.title}</Text>
+              <Text style={styles.cardSubtitle}>{link.subtitle}</Text>
             </View>
-
-            <View style={styles.row}>
-              <Text style={styles.label}>Wi-Fi Name</Text>
-              <Text style={styles.value}>{listing.wifi_name || '—'}</Text>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={styles.label}>Wi-Fi Password</Text>
-              <Text style={styles.value}>{listing.wifi_password || '—'}</Text>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Check-in Instructions</Text>
-              <Text style={styles.instructions}>
-                {listing.checkin_instructions || '—'}
-              </Text>
-            </View>
-          </View>
+            <IconSymbol name="bolt.fill" size={16} color={palette.gold} />
+          </Pressable>
         ))}
+      </View>
+
+      <View style={styles.noteCard}>
+        <Text style={styles.noteTitle}>Future Bookings</Text>
+        <Text style={styles.noteBody}>
+          We are curating premium stays and exclusive upgrades. Keep an eye on our website and
+          Instagram for upcoming releases.
+        </Text>
+      </View>
     </ScrollView>
   )
 }
@@ -111,7 +72,6 @@ const palette = {
   cream: '#FFFBF5',
   haze: '#E6D9C9',
   muted: '#8F8072',
-  error: '#B54A3A',
 }
 
 const styles = StyleSheet.create({
@@ -119,7 +79,7 @@ const styles = StyleSheet.create({
     padding: 26,
     paddingTop: 40,
     backgroundColor: palette.sand,
-    gap: 14,
+    gap: 16,
   },
   header: {
     gap: 6,
@@ -142,24 +102,13 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontFamily: Fonts.sans,
   },
-  center: {
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-  },
-  helper: {
-    fontSize: 13,
-    color: palette.muted,
-    fontFamily: Fonts.sans,
-  },
-  error: {
-    marginTop: 12,
-    color: palette.error,
-    fontWeight: '600',
-    fontFamily: Fonts.sans,
+  cardStack: {
+    gap: 12,
   },
   card: {
-    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     padding: 16,
     borderRadius: 18,
     backgroundColor: palette.cream,
@@ -170,49 +119,49 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  cardPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.92,
+  },
+  cardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1E7DA',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  cardText: {
+    flex: 1,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: palette.night,
     fontFamily: Fonts.rounded,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EFE5D8',
-  },
-  label: {
-    fontSize: 13,
-    color: palette.muted,
-    fontFamily: Fonts.sans,
-  },
-  value: {
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    color: palette.night,
-  },
-  section: {
-    marginTop: 12,
-  },
-  sectionTitle: {
+  cardSubtitle: {
+    marginTop: 4,
     fontSize: 12,
-    fontFamily: Fonts.sans,
-    letterSpacing: 0.6,
     color: palette.muted,
-    textTransform: 'uppercase',
+    fontFamily: Fonts.sans,
+  },
+  noteCard: {
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.haze,
+    backgroundColor: '#FFFFFF',
+  },
+  noteTitle: {
+    fontSize: 14,
+    color: palette.night,
+    fontFamily: Fonts.rounded,
     marginBottom: 6,
   },
-  instructions: {
+  noteBody: {
     fontSize: 13,
-    color: palette.night,
-    lineHeight: 18,
+    lineHeight: 20,
+    color: palette.muted,
     fontFamily: Fonts.sans,
   },
 })
