@@ -5,49 +5,45 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#C7A36A';
+const tintColorDark = '#F5E6C8';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#1C1914',
+    background: '#F6F1E8',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    icon: '#6F6256',
+    tabIconDefault: '#8A7C6E',
+    tabIconSelected: '#1A2E2F',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#F4EFE6',
+    background: '#121616',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#B9B1A6',
+    tabIconDefault: '#B9B1A6',
     tabIconSelected: tintColorDark,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'AvenirNext-Regular',
+    serif: 'Didot',
+    rounded: 'AvenirNext-DemiBold',
+    mono: 'Courier',
   },
   default: {
-    sans: 'normal',
+    sans: 'sans-serif-medium',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'sans-serif-condensed',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: "'Avenir Next', 'Avenir', 'Trebuchet MS', sans-serif",
+    serif: "'Didot', 'Georgia', serif",
+    rounded: "'Avenir Next Rounded', 'Avenir', sans-serif",
+    mono: "'SFMono-Regular', 'Courier New', monospace",
   },
 });
