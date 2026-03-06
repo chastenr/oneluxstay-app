@@ -15,6 +15,29 @@ function normalizeResults(data) {
   return []
 }
 
+function buildIdVariants(value) {
+  const trimmed = String(value ?? '').trim()
+  if (!trimmed) return []
+  const withoutResPrefix = trimmed.replace(/^res[.\-:\s]*/i, '').trim()
+  const values = [trimmed, trimmed.toUpperCase(), withoutResPrefix, withoutResPrefix.toUpperCase()]
+  return [...new Set(values.filter(Boolean))]
+}
+
+const RESERVATION_FIELDS = [
+  '_id',
+  'confirmationCode',
+  'status',
+  'listingId',
+  'listing._id',
+  'listing.title',
+  'guest._id',
+  'guest.fullName',
+  'checkIn',
+  'checkOut',
+  'checkInDateLocalized',
+  'checkOutDateLocalized',
+].join(' ')
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' }
@@ -39,22 +62,66 @@ exports.handler = async (event) => {
     }
   }
 
-  const code = String(payload.code ?? '').trim()
-  if (!code) {
+  const reservationId = String(payload.reservationId ?? payload.code ?? '').trim()
+  if (!reservationId) {
     return {
       statusCode: 400,
       headers,
-      body: JSON.stringify({ error: 'Reservation code is required' }),
+      body: JSON.stringify({ error: 'Reservation ID is required' }),
     }
   }
 
   try {
-    const query = payload.query && typeof payload.query === 'object'
-      ? payload.query
-      : { confirmationCode: code }
+    const ids = buildIdVariants(reservationId)
 
-    const guestyData = await guestyRequest('/reservations', { query })
-    const results = normalizeResults(guestyData)
+    const queryStrategies =
+      payload.query && typeof payload.query === 'object'
+        ? [payload.query]
+        : [
+            {
+              fields: RESERVATION_FIELDS,
+              filters: [
+                {
+                  operator: '$in',
+                  field: 'confirmationCode',
+                  value: ids,
+                },
+              ],
+              sort: '_id',
+              skip: 0,
+              limit: 100,
+            },
+            {
+              fields: RESERVATION_FIELDS,
+              filters: [
+                {
+                  operator: '$in',
+                  field: '_id',
+                  value: ids,
+                },
+              ],
+              sort: '_id',
+              skip: 0,
+              limit: 100,
+            },
+          ]
+
+    let guestyData = null
+    let results = []
+
+    for (const query of queryStrategies) {
+      try {
+        const response = await guestyRequest('/reservations', { query })
+        const normalized = normalizeResults(response)
+        guestyData = response
+        results = normalized
+        if (normalized.length > 0) break
+      } catch (error) {
+        if (error.statusCode === 401 || error.statusCode === 403) {
+          throw error
+        }
+      }
+    }
 
     return {
       statusCode: 200,

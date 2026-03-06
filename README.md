@@ -25,6 +25,31 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Guesty + Netlify setup
+
+This repo now uses the same token pattern as your website app:
+
+- Blob store: `guesty-oauth`
+- Blob key: `access-token`
+- Blob value: `{ "token": "...", "expiresAt": 1739999999999 }`
+
+Primary env vars:
+
+- `GUESTY_OPEN_API_CLIENT_ID`
+- `GUESTY_OPEN_API_CLIENT_SECRET`
+- `NETLIFY_SITE_ID` (optional, for remote Blob access)
+- `NETLIFY_API_TOKEN` (optional, for remote Blob access)
+- `GUESTY_TOKEN_URL` (optional, defaults to `https://open-api.guesty.com/oauth2/token`)
+- `GUESTY_BASE_URL` (optional, defaults to `https://open-api.guesty.com/v1`)
+- `GUESTY_TOKEN_BLOB_STORE` (optional override, default `guesty-oauth`)
+- `GUESTY_TOKEN_BLOB_KEY` (optional override, default `access-token`)
+- `EXPO_PUBLIC_RESERVATION_ENDPOINT` (optional app API override)
+
+For mobile/native Expo builds, set `EXPO_PUBLIC_RESERVATION_ENDPOINT` to your
+deployed Netlify URL, for example:
+
+- `https://<your-site>.netlify.app/.netlify/functions/getReservation`
+
 ## Get a fresh project
 
 When you're ready, run:

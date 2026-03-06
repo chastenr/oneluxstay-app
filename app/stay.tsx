@@ -26,7 +26,7 @@ function parseReservation(param?: string | string[]) {
   if (!param || Array.isArray(param)) return null
   try {
     return JSON.parse(decodeURIComponent(param)) as Reservation
-  } catch (error) {
+  } catch {
     return null
   }
 }

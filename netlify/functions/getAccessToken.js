@@ -1,9 +1,9 @@
-const { getAccessToken } = require('./_guesty')
+const { getGuestyToken } = require('./_guesty')
 
 const headers = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'content-type',
-  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type, authorization',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
 }
 
 exports.handler = async (event) => {
@@ -11,7 +11,7 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' }
   }
 
-  if (event.httpMethod !== 'POST') {
+  if (!['GET', 'POST'].includes(event.httpMethod)) {
     return {
       statusCode: 405,
       headers,
@@ -20,11 +20,11 @@ exports.handler = async (event) => {
   }
 
   try {
-    const accessToken = await getAccessToken()
+    const { token, source } = await getGuestyToken()
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ access_token: accessToken }),
+      body: JSON.stringify({ access_token: token, source }),
     }
   } catch (error) {
     return {

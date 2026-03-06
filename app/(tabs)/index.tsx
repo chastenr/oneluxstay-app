@@ -11,16 +11,43 @@ import {
   SafeAreaView,
   Animated,
   Easing,
+  Linking,
 } from 'react-native'
 import { supabase } from '../../lib/supabase'
 import { IconSymbol } from '@/components/ui/icon-symbol'
 import { Fonts } from '@/constants/theme'
 
 const RESERVATION_ENDPOINT =
-  "https://xjyjupxhvprbwiravysf.supabase.co/functions/v1/guesty-fetch"
+  process.env.EXPO_PUBLIC_RESERVATION_ENDPOINT ||
+  'https://oneluxstayprop.netlify.app/.netlify/functions/getReservation'
+
+type FlowState = 'prompt' | 'lookup' | 'no-reservation' | 'dashboard'
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+function formatDateTime(value: unknown) {
+  if (!value) return '-'
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
 
 export default function Home() {
-  const [code, setCode] = useState('')
+  const [flow, setFlow] = useState<FlowState>('prompt')
+  const [reservationId, setReservationId] = useState('')
   const [reservation, setReservation] = useState<any>(null)
   const [listing, setListing] = useState<any>(null)
   const [errorMessage, setErrorMessage] = useState('')
@@ -51,9 +78,34 @@ export default function Home() {
     }
   }, [floatAnim])
 
-  const checkCode = async () => {
-    if (!code.trim()) {
-      setErrorMessage('Please enter your reservation code')
+  const resetSearch = () => {
+    setReservationId('')
+    setReservation(null)
+    setListing(null)
+    setErrorMessage('')
+    setLoading(false)
+    setFlow('prompt')
+  }
+
+  const fetchListing = async (listingId: string) => {
+    const { data } = await supabase
+      .from('Listings')
+      .select('*')
+      .eq('listing_id', listingId)
+      .maybeSingle()
+    setListing(data || null)
+  }
+
+  const checkReservation = async () => {
+    if (!reservationId.trim()) {
+      setErrorMessage('Please enter your reservation ID')
+      return
+    }
+
+    if (!RESERVATION_ENDPOINT) {
+      setErrorMessage(
+        'Set EXPO_PUBLIC_RESERVATION_ENDPOINT to your Netlify function URL'
+      )
       return
     }
 
@@ -63,53 +115,69 @@ export default function Home() {
     setListing(null)
 
     try {
+      const id = reservationId.trim()
       const response = await fetch(RESERVATION_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim() }),
+        body: JSON.stringify({ reservationId: id, code: id }),
       })
 
       const text = await response.text()
+      let data: any = {}
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = {}
+      }
 
       if (!response.ok) {
-        console.log('Server error:', text)
-        setErrorMessage('Server error')
-        setLoading(false)
+        if (
+          response.status === 404 &&
+          RESERVATION_ENDPOINT.startsWith('/.netlify/functions/')
+        ) {
+          setErrorMessage(
+            'Netlify function not reachable. Set EXPO_PUBLIC_RESERVATION_ENDPOINT to your deployed Netlify URL.'
+          )
+        } else {
+          setErrorMessage(data?.error || data?.message || 'Server error')
+        }
         return
       }
 
-      const data = JSON.parse(text)
-
-      if (!data.results || data.results.length === 0) {
-        setErrorMessage('Invalid reservation code')
-        setLoading(false)
+      if (!Array.isArray(data.results) || data.results.length === 0) {
+        setErrorMessage('No reservation found for that ID')
         return
       }
 
       const reservationData = data.results[0]
-
       setReservation(reservationData)
+      setFlow('dashboard')
 
-      if (reservationData.listingId) {
-        const { data: listingData } = await supabase
-          .from('Listings')
-          .select('*')
-          .eq('listing_id', reservationData.listingId)
-          .single()
+      const listingId = firstString(
+        reservationData?.listingId,
+        reservationData?.listing?._id,
+        reservationData?.listing?.id
+      )
 
-        if (listingData) {
-          setListing(listingData)
-        }
+      if (listingId) {
+        await fetchListing(listingId)
       }
     } catch (error) {
-      console.log(error)
-      setErrorMessage('Something went wrong')
+      if (error instanceof Error && error.message) {
+        setErrorMessage(error.message)
+      } else {
+        setErrorMessage('Something went wrong')
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
-  const isDisabled = loading || !code.trim()
+  const openWebsite = async () => {
+    await Linking.openURL('https://oneluxstay.com')
+  }
+
+  const isDisabled = loading || !reservationId.trim()
   const logoTranslate = floatAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, -6],
@@ -122,6 +190,51 @@ export default function Home() {
     inputRange: [0, 1],
     outputRange: [0.35, 0.85],
   })
+
+  const reservationCode = firstString(
+    reservation?.confirmationCode,
+    reservation?.reservationId,
+    reservation?._id,
+    reservation?.id
+  )
+  const guestName = firstString(
+    reservation?.guestName,
+    reservation?.guest?.fullName,
+    `${reservation?.guest?.firstName || ''} ${reservation?.guest?.lastName || ''}`
+  )
+  const listingName = firstString(
+    listing?.listing_name,
+    listing?.name,
+    reservation?.listing?.title,
+    reservation?.listingName,
+    reservation?.listingId
+  )
+  const checkIn = firstString(
+    reservation?.checkInDateLocalized,
+    reservation?.checkInDate,
+    reservation?.checkIn
+  )
+  const checkOut = firstString(
+    reservation?.checkOutDateLocalized,
+    reservation?.checkOutDate,
+    reservation?.checkOut
+  )
+  const doorCode = firstString(
+    listing?.door_code,
+    listing?.doorCode,
+    listing?.lock_code,
+    reservation?.doorCode
+  )
+  const wifiName = firstString(listing?.wifi_name, listing?.wifiName)
+  const wifiPassword = firstString(
+    listing?.wifi_password,
+    listing?.wifiPassword,
+    listing?.wifi_pass
+  )
+  const checkInInstructions = firstString(
+    listing?.checkin_instructions,
+    listing?.check_in_instructions
+  )
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -152,60 +265,103 @@ export default function Home() {
           </Animated.View>
 
           <Text style={styles.brand}>ONE LUX STAY</Text>
-          <Text style={styles.title}>Find Your Reservation</Text>
+          <Text style={styles.title}>Guest Access</Text>
           <Text style={styles.subtitle}>
-            Enter your code to unlock check-in details for your stay.
+            Reservation lookup and stay details in one secure dashboard.
           </Text>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>Reservation Code</Text>
-            <View style={styles.securePill}>
-              <IconSymbol name="lock.fill" size={14} color={palette.night} />
-              <Text style={styles.secureText}>Secure</Text>
-            </View>
+        {flow === 'prompt' && (
+          <View style={styles.card}>
+            <Text style={styles.promptTitle}>Do you have a reservation?</Text>
+            <Text style={styles.promptSubtitle}>
+              Select an option below to continue.
+            </Text>
+
+            <Pressable style={styles.choiceButton} onPress={() => setFlow('lookup')}>
+              <IconSymbol name="checkmark.seal.fill" size={16} color={palette.night} />
+              <Text style={styles.choiceText}>Yes, I have a reservation</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.choiceButton, styles.choiceButtonAlt]}
+              onPress={() => setFlow('no-reservation')}
+            >
+              <IconSymbol name="sparkles" size={16} color={palette.night} />
+              <Text style={styles.choiceText}>No, I need to book a stay</Text>
+            </Pressable>
           </View>
+        )}
 
-          <View style={styles.inputRow}>
-            <View style={styles.inputIcon}>
-              <IconSymbol name="key.fill" size={18} color={palette.night} />
+        {flow === 'lookup' && (
+          <View style={styles.card}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Reservation ID</Text>
+              <View style={styles.securePill}>
+                <IconSymbol name="lock.fill" size={14} color={palette.night} />
+                <Text style={styles.secureText}>Secure</Text>
+              </View>
             </View>
-            <TextInput
-              placeholder="Enter Reservation Code"
-              placeholderTextColor={palette.muted}
-              value={code}
-              onChangeText={setCode}
-              autoCapitalize="characters"
-              style={styles.input}
-            />
+
+            <View style={styles.inputRow}>
+              <View style={styles.inputIcon}>
+                <IconSymbol name="key.fill" size={18} color={palette.night} />
+              </View>
+              <TextInput
+                placeholder="Enter Reservation ID (ex: Res.HMHF2K9D4S)"
+                placeholderTextColor={palette.muted}
+                value={reservationId}
+                onChangeText={setReservationId}
+                autoCapitalize="characters"
+                style={styles.input}
+              />
+            </View>
+
+            <Pressable
+              onPress={checkReservation}
+              disabled={isDisabled}
+              style={({ pressed }) => [
+                styles.button,
+                isDisabled && styles.buttonDisabled,
+                pressed && !isDisabled && styles.buttonPressed,
+              ]}
+            >
+              {loading ? (
+                <ActivityIndicator color={palette.cream} />
+              ) : (
+                <Text style={styles.buttonText}>Find My Reservation</Text>
+              )}
+            </Pressable>
+
+            <Pressable style={styles.linkButton} onPress={resetSearch}>
+              <Text style={styles.linkButtonText}>Back</Text>
+            </Pressable>
+
+            {errorMessage !== '' && <Text style={styles.error}>{errorMessage}</Text>}
           </View>
+        )}
 
-          <Pressable
-            onPress={checkCode}
-            disabled={isDisabled}
-            style={({ pressed }) => [
-              styles.button,
-              isDisabled && styles.buttonDisabled,
-              pressed && !isDisabled && styles.buttonPressed,
-            ]}
-          >
-            {loading ? (
-              <ActivityIndicator color={palette.cream} />
-            ) : (
-              <Text style={styles.buttonText}>Check Reservation</Text>
-            )}
-          </Pressable>
+        {flow === 'no-reservation' && (
+          <View style={styles.card}>
+            <Text style={styles.promptTitle}>No reservation yet</Text>
+            <Text style={styles.promptSubtitle}>
+              Visit OneLuxStay to browse available properties and book your stay.
+            </Text>
 
-          {errorMessage !== '' && (
-            <Text style={styles.error}>{errorMessage}</Text>
-          )}
-        </View>
+            <Pressable style={styles.button} onPress={openWebsite}>
+              <Text style={styles.buttonText}>Go to oneluxstay.com</Text>
+            </Pressable>
 
-        {reservation && (
+            <Pressable style={styles.linkButton} onPress={resetSearch}>
+              <Text style={styles.linkButtonText}>Back</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {flow === 'dashboard' && reservation && (
           <View style={styles.detailsCard}>
             <View style={styles.detailsHeader}>
-              <Text style={styles.detailsTitle}>Reservation Summary</Text>
+              <Text style={styles.detailsTitle}>Guest Dashboard</Text>
               <View style={styles.detailsBadge}>
                 <IconSymbol name="checkmark.seal.fill" size={14} color={palette.gold} />
                 <Text style={styles.detailsBadgeText}>Verified</Text>
@@ -213,42 +369,52 @@ export default function Home() {
             </View>
 
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Confirmation</Text>
-              <Text style={styles.detailValue}>{reservation.confirmationCode}</Text>
+              <Text style={styles.detailLabel}>Guest</Text>
+              <Text style={styles.detailValue}>{guestName || '-'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Reservation ID</Text>
+              <Text style={styles.detailValue}>{reservationCode || '-'}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Listing</Text>
-              <Text style={styles.detailValue}>{reservation.listingId}</Text>
+              <Text style={styles.detailValue}>{listingName || '-'}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Check-in</Text>
-              <Text style={styles.detailValue}>{reservation.checkInDate}</Text>
+              <Text style={styles.detailValue}>{formatDateTime(checkIn)}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Check-out</Text>
-              <Text style={styles.detailValue}>{reservation.checkOutDate}</Text>
+              <Text style={styles.detailValue}>{formatDateTime(checkOut)}</Text>
             </View>
 
-            {listing && (
-              <View style={styles.listingBlock}>
-                <Text style={styles.detailsSubtitle}>Access Details</Text>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Door code</Text>
-                  <Text style={styles.detailValue}>{listing.door_code}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>WiFi</Text>
-                  <Text style={styles.detailValue}>{listing.wifi_name}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Password</Text>
-                  <Text style={styles.detailValue}>{listing.wifi_password}</Text>
-                </View>
-                {listing.checkin_instructions ? (
-                  <Text style={styles.instructions}>{listing.checkin_instructions}</Text>
-                ) : null}
+            <View style={styles.listingBlock}>
+              <Text style={styles.detailsSubtitle}>Stay Access</Text>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Door lock PIN</Text>
+                <Text style={styles.detailValue}>{doorCode || '-'}</Text>
               </View>
-            )}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Wi-Fi Name</Text>
+                <Text style={styles.detailValue}>{wifiName || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Wi-Fi Password</Text>
+                <Text style={styles.detailValue}>{wifiPassword || '-'}</Text>
+              </View>
+              {checkInInstructions ? (
+                <Text style={styles.instructions}>{checkInInstructions}</Text>
+              ) : (
+                <Text style={styles.instructionsMuted}>
+                  Access details are shown once available for your listing.
+                </Text>
+              )}
+            </View>
+
+            <Pressable style={styles.buttonSecondary} onPress={resetSearch}>
+              <Text style={styles.buttonSecondaryText}>Lookup Another Reservation</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -364,7 +530,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: palette.muted,
     textAlign: 'center',
-    maxWidth: 320,
+    maxWidth: 330,
     fontFamily: Fonts.sans,
   },
   card: {
@@ -380,6 +546,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 14,
     elevation: 4,
+  },
+  promptTitle: {
+    fontSize: 22,
+    color: palette.night,
+    fontFamily: Fonts.serif,
+    textAlign: 'center',
+  },
+  promptSubtitle: {
+    marginTop: 8,
+    marginBottom: 16,
+    textAlign: 'center',
+    color: palette.muted,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: Fonts.sans,
+  },
+  choiceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#F4EBDD',
+    borderWidth: 1,
+    borderColor: palette.haze,
+    marginBottom: 10,
+  },
+  choiceButtonAlt: {
+    backgroundColor: '#EFE6D9',
+  },
+  choiceText: {
+    fontFamily: Fonts.sans,
+    color: palette.night,
+    fontSize: 14,
   },
   labelRow: {
     flexDirection: 'row',
@@ -461,6 +662,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
+  linkButton: {
+    marginTop: 10,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  linkButtonText: {
+    color: palette.night,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   error: {
     marginTop: 12,
     color: palette.error,
@@ -483,7 +696,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailsTitle: {
-    fontSize: 18,
+    fontSize: 20,
     color: palette.night,
     fontFamily: Fonts.serif,
   },
@@ -541,5 +754,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: palette.muted,
     fontFamily: Fonts.sans,
+  },
+  instructionsMuted: {
+    marginTop: 12,
+    fontSize: 12,
+    lineHeight: 18,
+    color: palette.muted,
+    fontFamily: Fonts.sans,
+    fontStyle: 'italic',
+  },
+  buttonSecondary: {
+    marginTop: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: palette.haze,
+    backgroundColor: palette.cream,
+  },
+  buttonSecondaryText: {
+    color: palette.night,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
 })
